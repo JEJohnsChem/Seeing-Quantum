@@ -11,19 +11,20 @@ matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg #, NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
 import numpy as np
-
 x=np.linspace(-10,10,1000)
 psi0=np.exp(-x**2/2)
 dx=x[1]-x[0]
 L=x[-1]-x[0]
-f=Figure(figsize=(6,6))
-f2=Figure(figsize=(6,6))
-a=f.add_subplot(111)
+f=Figure(figsize=(4,4),constrained_layout=True)
+f2=Figure(figsize=(4,4), constrained_layout=True)
+f3=Figure(figsize=(3,3))
+a=f.add_subplot()
 a.plot(x,psi0)
-a2=f2.add_subplot(222)
+a2=f2.add_subplot()
+a3=f3.add_subplot()
 wavelength_coefficients=np.zeros((nbasis,1))
 def HO():
-    nbasis=100
+    nbasis=15
     k=int(k_lowest.get())
     K=np.zeros((nbasis,nbasis))
     V=np.zeros((nbasis,nbasis))
@@ -95,7 +96,7 @@ def PIB():
                 else:
                     wavelength=2*np.pi/k
                     a2.plot(wavelength,wavelength_coefficients[j],'+',color='black')
-
+    a.set_xlabel('Distance',fontsize=14)
     canvas.draw()
 #    a2.axis([-L/2,L/2,0,0.02])
     
@@ -174,8 +175,15 @@ def user_defined():
         psis=np.zeros((len(x),nbasis),dtype=complex)
         wavelength_coefficients=np.zeros((nbasis,1))
         for i in idx[:kk]:
+            if E[i]==np.min(E):
+                a3.clear()
+                a3.plot(np.linspace(1,nbasis,nbasis),np.real(W[:,i]),np.linspace(1,nbasis,nbasis),np.imag(W[:,i]))
+                f3.suptitle('Coefficients basis functions')
+                a3.legend(('Real', 'Imag'))
+                canvas3.get_tk_widget().grid(row=10,column=0, pady=20)
+                canvas3.draw()
             for j in range(nbasis):
-            
+                
                 if not v.get():
                     
                     psis[:,i]=psis[:,i]+np.sqrt(2/L)*np.sin((j+1)*np.pi*(x+10)/L)*W[j,i]
@@ -185,18 +193,19 @@ def user_defined():
                     else:
                         wavelength=2*np.pi/k
                     if E[i]==np.min(E):
-                        wavelength_coefficients[j]=W[j,i]*np.conj(W[j,i])
+                        wavelength_coefficients[j]=np.real(W[j,i]*np.conj(W[j,i]))
                         a2.plot(wavelength,wavelength_coefficients[j],'+',color='black')
+                        a2.plot(-wavelength,wavelength_coefficients[j],'+',color='black')
                 else:
                     k=2*pi/L*(j-nbasis//2)
                     if k==0:
-                        wavelength=2*L
+                        wavelength=0
                     else:
                         wavelength=2*np.pi/k
                     if E[i]==np.min(E):
                         wavelength_coefficients[j]=W[j,i]*np.conj(W[j,i])
                         a2.plot(wavelength,wavelength_coefficients[j],'+',color='black')
-                    psis[:,i]=psis[:,i] + 1/np.sqrt(L)*np.exp(1j*k*x)*W[j,i]
+                    psis[:,i]=psis[:,i] + 1/np.sqrt(L)*np.exp(-1j*k*x)*W[j,i]
             if not v.get():
                 a.text(x=10,y=E[i],s='E = {0:.3f}'.format(np.real(E[i])))
                 a.plot(x,np.real(psis[:,i])/np.max(psis[:,i])+E[i])
@@ -211,8 +220,11 @@ def user_defined():
                 a.axis([np.min(x),np.max(x),np.min(E)-1, np.max(E[idx[:kk]])+1])
                 
 #        print0*x(psis[:,idx[0]])
+        a.set_xlabel('Distance',fontsize=16)
+        a.set_ylabel('Energy',fontsize=16)
+        a2.set_xlabel('Wavelength',fontsize=16)
+        a2.set_ylabel('${|c_\lambda|^2}$', fontsize=16)
         
-#        a.legend((line1, line2),('Real \psi', 'Imag \psi'))
         canvas.draw()
         canvas2.draw()
         
@@ -221,26 +233,33 @@ def user_defined():
 ##toolbar.update()
 #canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 window = tkinter.Tk()
+
+window.option_add('*font','Ariel 14')
 v=tkinter.IntVar()
 window.title('Intro to Tkinter')
 window.geometry("1200x900")
-left_frame=tkinter.Frame(window)
+left_frame=tkinter.Frame(window,bg='white')
 left_frame.grid(row=0,column=0)
 right_frame=tkinter.Frame(window)
 right_frame.grid(row=0,column=1)
 
 
 canvas=FigureCanvasTkAgg(f,left_frame)
-canvas.get_tk_widget().pack(side=tkinter.LEFT, fill=tkinter.BOTH)
+canvas.get_tk_widget().grid(row=1)
 canvas2=FigureCanvasTkAgg(f2,left_frame)
-canvas2.get_tk_widget().pack(side=tkinter.BOTTOM)
+canvas2.get_tk_widget().grid(row=3)
+canvas3=FigureCanvasTkAgg(f3,right_frame)
+tkinter.Label(left_frame,text='Wavefunctions',font=('Ariel',18),bg='white').grid(row=0)
+tkinter.Label(left_frame,text='Fourier Transform of Ground State', font=('Ariel',18),bg='white').grid(row=2)
 button_free_particle=tkinter.Button(right_frame,text='Free Particle',width=20)
 button_pib=tkinter.Button(right_frame,text='Particle in a Box',width=20,command=PIB)
 button_harmonic_oscillator=tkinter.Button(right_frame,text='Harmonic Oscillator',width=20, command=HO)
 button_delta=tkinter.Button(right_frame,text='Delta Function',width=20, command=delta)
 button_user=tkinter.Button(right_frame,text='User Defined',width=20, command = user_defined)
 tkinter.Label(right_frame,text='Potential Energy Landscape V(x)').grid(row=0,column=0)
-user_input=tkinter.Entry(right_frame,text='Input your own V(x)')
+entry_default_text=tkinter.StringVar(window, value='Enter a pythonic, numpy function of x')
+user_input=tkinter.Entry(right_frame,textvariable=entry_default_text,font=('Times',10),width=38)
+
 radio_button_PBC=tkinter.Radiobutton(right_frame, text='Periodic Boundary Conditions', variable=v,value=1)
 radio_button_Clamped=tkinter.Radiobutton(right_frame,text='Clamped Boundary Conditions', variable=v,value=0)
 button_free_particle.grid(row=1,column=0)
